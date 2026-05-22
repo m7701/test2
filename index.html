@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADHD 실행 기능 모드 — Claude AI</title>
+  <style>
+    :root {
+      --bg: #0f0f13;
+      --surface: #1a1a24;
+      --surface2: #22222f;
+      --border: #2e2e42;
+      --accent: #7c6aff;
+      --accent2: #ff6a9d;
+      --accent3: #6affb8;
+      --accent4: #ffb86a;
+      --text: #e8e8f0;
+      --muted: #8888aa;
+      --danger: #ff4f6a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0 0 60px;
+    }
+
+    /* HEADER */
+    header {
+      background: linear-gradient(135deg, #1a1440 0%, #0f0f13 60%);
+      border-bottom: 1px solid var(--border);
+      padding: 24px 20px 20px;
+      text-align: center;
+    }
+    header .badge {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+    }
+    header h1 {
+      font-size: clamp(20px, 5vw, 32px);
+      font-weight: 800;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+    header p {
+      color: var(--muted);
+      font-size: 14px;
+      max-width: 500px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+
+    /* API KEY SECTION */
+    .api-section {
+      max-width: 700px;
+      margin: 24px auto 0;
+      padding: 0 16px;
+    }
+    .api-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .api-box label {
+      font-size: 13px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .api-box input {
+      flex: 1;
+      min-width: 180px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: monospace;
+      outline: none;
+    }
+    .api-box input:focus { border-color: var(--accent); }
+    .api-box .save-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: opacity .15s;
+    }
+    .api-box .save-btn:hover { opacity: .85; }
+    .api-status {
+      font-size: 12px;
+      margin-top: 6px;
+      padding-left: 4px;
+    }
+    .api-status.ok { color: var(--accent3); }
+    .api-status.err { color: var(--danger); }
+
+    /* NAV TABS */
+    .tabs {
+      max-width: 700px;
+      margin: 24px auto 0;
+      padding: 0 16px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 7px 13px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { border-color: var(--accent); color: var(--text); }
+    .tab-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* CARDS */
+    .cards {
+      max-width: 700px;
+      margin: 20px auto 0;
+      padding: 0 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      display: none;
+    }
+    .card.visible { display: block; }
+    .card-header {
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+    .card-icon {
+      font-size: 28px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .card-meta { flex: 1; }
+    .card-num {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .card-desc {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .card-body { padding: 18px 20px; }
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .field input, .field textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      resize: vertical;
+      transition: border-color .15s;
+    }
+    .field input:focus, .field textarea:focus { border-color: var(--accent); }
+    .field textarea { min-height: 80px; }
+    .field input::placeholder, .field textarea::placeholder { color: var(--muted); opacity: .6; }
+
+    /* PROMPT PREVIEW */
+    .prompt-preview {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 14px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .prompt-preview .slot {
+      color: var(--accent2);
+      font-weight: 600;
+    }
+    .prompt-preview .filled {
+      color: var(--accent3);
+      font-weight: 600;
+    }
+
+    /* ACTION BUTTONS */
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: all .15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { opacity: .85; }
+    .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-copy {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-copy:hover { border-color: var(--accent); }
+
+    /* RESPONSE */
+    .response-area {
+      margin-top: 16px;
+      display: none;
+    }
+    .response-area.visible { display: block; }
+    .response-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .response-content {
+      background: var(--bg);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 14px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--text);
+      position: relative;
+    }
+    .response-content.loading {
+      color: var(--muted);
+      font-style: italic;
+    }
+    .thinking-dots::after {
+      content: '';
+      animation: dots 1.2s infinite;
+    }
+    @keyframes dots {
+      0%   { content: '.'; }
+      33%  { content: '..'; }
+      66%  { content: '...'; }
+    }
+    .copy-resp-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .copy-resp-btn:hover { color: var(--text); }
+
+    /* COLOR ACCENTS PER CARD */
+    .card[data-color="purple"] .card-header { border-left: 3px solid var(--accent); }
+    .card[data-color="pink"]   .card-header { border-left: 3px solid var(--accent2); }
+    .card[data-color="green"]  .card-header { border-left: 3px solid var(--accent3); }
+    .card[data-color="orange"] .card-header { border-left: 3px solid var(--accent4); }
+    .card[data-color="purple"] .btn-primary { background: var(--accent); }
+    .card[data-color="pink"]   .btn-primary { background: var(--accent2); }
+    .card[data-color="green"]  .btn-primary { background: #2ea87a; }
+    .card[data-color="orange"] .btn-primary { background: #c8780a; }
+    .card[data-color="purple"] .response-content { border-color: var(--accent); }
+    .card[data-color="pink"]   .response-content { border-color: var(--accent2); }
+    .card[data-color="green"]  .response-content { border-color: var(--accent3); }
+    .card[data-color="orange"] .response-content { border-color: var(--accent4); }
+
+    /* COPY SUCCESS TOAST */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--accent3);
+      color: #0a2a1a;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      opacity: 0;
+      transition: all .25s;
+      pointer-events: none;
+      z-index: 999;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* RESPONSIVE */
+    @media (max-width: 480px) {
+      .actions { flex-direction: column; }
+      .btn { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="badge">ADHD Executive Function Mode</div>
+  <h1>⚡ ADHD 실행 기능 모드</h1>
+  <p>도파민 구조를 활용해 작업 시작·집중·전환을 AI와 함께<br>7가지 검증된 실행 기능 프롬프트</p>
+</header>
+
+<!-- API KEY -->
+<div class="api-section">
+  <div class="api-box">
+    <label for="apiKeyInput">🔑 Claude API Key</label>
+    <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off">
+    <button class="save-btn" onclick="saveApiKey()">저장</button>
+  </div>
+  <div class="api-status" id="apiStatus"></div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="tabsContainer"></div>
+
+<!-- CARDS -->
+<div class="cards" id="cardsContainer"></div>
+
+<!-- TOAST -->
+<div id="toast">복사됨!</div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const PROMPTS = [
+  {
+    id: 'paralysis',
+    num: '01',
+    icon: '🚀',
+    title: '작업 마비 해체',
+    desc: '시작 못 하는 상태를 1분 이하 초소형 단계로 분해',
+    color: 'purple',
+    fields: [
+      { key: 'task', label: '지금 바라만 보고 있는 작업', placeholder: '예: 보고서 초안 작성, 이메일 답장 등' }
+    ],
+    template: (f) => `나는 [${f.task||'작업'}]을(를) 바라만 보고 있고 시작을 못 하고 있다. 이 작업을 각각 1분 이하로 걸리는 '말도 안 되게 작은' 단계들로 나눠줘. 그리고 첫 번째 단계와 시작하기 위해 정확히 어디에 손을 둬야 하는지도 알려줘.`,
+  },
+  {
+    id: 'dopamine',
+    num: '02',
+    icon: '🍽️',
+    title: '도파민 메뉴 설계',
+    desc: '뇌가 계속 몰입하도록 애피타이저 → 메인 → 사이드 구성',
+    color: 'pink',
+    fields: [
+      { key: 'context', label: '지금 상황 (선택)', placeholder: '예: 오후 3시, 에너지 낮음, 마감 내일' }
+    ],
+    template: (f) => `나는 지금 자극이 부족한 상태다${f.context ? ' (' + f.context + ')' : ''}. 내 뇌가 계속 몰입할 수 있도록 5분짜리 '애피타이저'(빠른 움직임), 20분짜리 '메인 메뉴'(딥워크), 10분짜리 '사이드'(창의적 놀이)로 구성된 '도파민 메뉴'를 만들어줘.`,
+  },
+  {
+    id: 'bodydouble',
+    num: '03',
+    icon: '🤝',
+    title: '바디 더블링 시뮬레이터',
+    desc: '가상 파트너가 10분마다 체크인하며 집중력 유지',
+    color: 'green',
+    fields: [
+      { key: 'task', label: '지금 할 작업', placeholder: '예: 기획서 3페이지 작성' },
+      { key: 'duration', label: '집중할 시간 (분)', placeholder: '예: 25' }
+    ],
+    template: (f) => `앞으로 ${f.duration||'30'}분 동안 내 가상 바디 더블 역할을 해줘. 내가 지금 하는 작업은 [${f.task||'작업 내용'}]이다. 10분마다 체크인해서 진행 상황을 물어보고 내 집중력이 흐트러지지 않게 유지해줘. 첫 번째 체크인 스크립트도 미리 써줘.`,
+  },
+  {
+    id: 'switch',
+    num: '04',
+    icon: '🔀',
+    title: '컨텍스트 전환 가이드',
+    desc: '서로 다른 에너지의 작업 사이 3분 멘탈 입가심 루틴',
+    color: 'orange',
+    fields: [
+      { key: 'from', label: '방금 끝낸 작업', placeholder: '예: 창의적인 디자인 작업' },
+      { key: 'to', label: '이제 시작해야 할 작업', placeholder: '예: 숫자 정리, 예산 검토' }
+    ],
+    template: (f) => `나는 방금 [${f.from||'작업 A'}]를 끝냈고 이제 [${f.to||'작업 B'}]를 시작해야 하는데 뇌가 전환되지 않는다. 서로 다른 에너지 유형 사이를 이동할 수 있도록 3분짜리 '멘탈 입가심 루틴'을 설계해줘.`,
+  },
+  {
+    id: 'gamify',
+    num: '05',
+    icon: '🎮',
+    title: '흥미 기반 게임화 필터',
+    desc: '지루한 업무를 내가 좋아하는 것과 연결해 퀘스트로 변환',
+    color: 'pink',
+    fields: [
+      { key: 'task', label: '해야 하는 지루한 작업', placeholder: '예: 영수증 정리, 이메일 분류' },
+      { key: 'interest', label: '지금 과몰입 중인 관심사', placeholder: '예: 롤플레잉 게임, 요리, 축구' }
+    ],
+    template: (f) => `나는 지금 지루한 행정 업무인 [${f.task||'작업'}]을(를) 해야 한다. 이걸 현재 내가 과몰입 중인 관심사인 [${f.interest||'흥미'}]와 연결해서 게임처럼 만들어줘. 작업 완료 시 보상이 해금되는 '퀘스트 구조'로 설계해줘.`,
+  },
+  {
+    id: 'timemap',
+    num: '06',
+    icon: '🗺️',
+    title: '시간 감각 감사관',
+    desc: '실제 소요 시간을 과소평가하는 패턴 분석 + 현실적 타임맵',
+    color: 'orange',
+    fields: [
+      { key: 'project', label: '작업/프로젝트 이름', placeholder: '예: 발표 자료 준비' },
+      { key: 'estimate', label: '내 예상 소요 시간', placeholder: '예: 30분' },
+      { key: 'actual', label: '실제 걸리는 시간 (대략)', placeholder: '예: 2~3시간' }
+    ],
+    template: (f) => `나는 [${f.project||'프로젝트'}]가 ${f.estimate||'20분'} 걸릴 거라고 생각하지만 실제로는 항상 ${f.actual||'2시간'}이 걸린다. 내가 항상 놓치는 숨겨진 하위 작업 3개를 찾아서 '타임 맵'을 만들어주고 현실적인 마감 시간을 설정할 수 있게 도와줘.`,
+  },
+  {
+    id: 'openloop',
+    num: '07',
+    icon: '🧠',
+    title: '실행 기능 외부화',
+    desc: '머릿속 열린 루프를 쏟아내고 "지금/나중/버리기" 분류',
+    color: 'purple',
+    fields: [
+      { key: 'dump', label: '지금 머릿속 걱정거리를 모두 쏟아내세요', placeholder: '예: 팀장 메일 답장해야 함\n강아지 병원 예약\n이번 주 발표 준비\n청구서 확인\n친구 생일 선물...', textarea: true }
+    ],
+    template: (f) => `내 머릿속은 지금 '열린 루프'들로 가득 차 있다. 아래에 내가 걱정하는 모든 걸 쏟아낼 테니 이를 '지금', '나중', '버리기'로 분류하고, '지금' 항목들에 대해서만 한 문장짜리 실행 가능한 다음 행동을 작성해줘.\n\n${f.dump||'(걱정 목록을 입력해주세요)'}`,
+  },
+];
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let apiKey = localStorage.getItem('claude_api_key') || '';
+let activeFilter = 'all';
+const fieldValues = {}; // { promptId: { fieldKey: value } }
+const responses   = {}; // { promptId: string }
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  if (apiKey) {
+    document.getElementById('apiKeyInput').value = apiKey;
+    setApiStatus('저장된 키 사용 중', 'ok');
+  }
+  buildTabs();
+  buildCards();
+});
+
+// ─── API KEY ─────────────────────────────────────────────────────────────────
+function saveApiKey() {
+  const val = document.getElementById('apiKeyInput').value.trim();
+  if (!val.startsWith('sk-ant-')) {
+    setApiStatus('올바른 Claude API 키를 입력해주세요 (sk-ant-...)', 'err');
+    return;
+  }
+  apiKey = val;
+  localStorage.setItem('claude_api_key', val);
+  setApiStatus('✓ 저장됨 — 이제 AI 응답을 받을 수 있어요', 'ok');
+}
+function setApiStatus(msg, type) {
+  const el = document.getElementById('apiStatus');
+  el.textContent = msg;
+  el.className = 'api-status ' + type;
+}
+
+// ─── TABS ────────────────────────────────────────────────────────────────────
+const TAB_DEFS = [
+  { id: 'all',       label: '전체 보기' },
+  { id: 'start',     label: '🚀 시작' },
+  { id: 'focus',     label: '🎯 집중' },
+  { id: 'switch',    label: '🔀 전환' },
+  { id: 'brain',     label: '🧠 뇌 정리' },
+];
+const TAB_MAP = {
+  all:    ['paralysis','dopamine','bodydouble','switch','gamify','timemap','openloop'],
+  start:  ['paralysis','gamify'],
+  focus:  ['bodydouble','dopamine'],
+  switch: ['switch','timemap'],
+  brain:  ['openloop'],
+};
+function buildTabs() {
+  const container = document.getElementById('tabsContainer');
+  TAB_DEFS.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (t.id === 'all' ? ' active' : '');
+    btn.textContent = t.label;
+    btn.onclick = () => setTab(t.id, btn);
+    container.appendChild(btn);
+  });
+}
+function setTab(id, btn) {
+  activeFilter = id;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const visible = TAB_MAP[id];
+  document.querySelectorAll('.card').forEach(card => {
+    card.classList.toggle('visible', visible.includes(card.dataset.id));
+  });
+}
+
+// ─── CARDS ───────────────────────────────────────────────────────────────────
+function buildCards() {
+  const container = document.getElementById('cardsContainer');
+  PROMPTS.forEach(p => {
+    if (!fieldValues[p.id]) fieldValues[p.id] = {};
+    const card = document.createElement('div');
+    card.className = 'card visible';
+    card.dataset.id = p.id;
+    card.dataset.color = p.color;
+
+    // fields HTML
+    let fieldsHTML = '';
+    p.fields.forEach(f => {
+      fieldsHTML += `<div class="field">
+        <label>${f.label}</label>
+        ${f.textarea
+          ? `<textarea placeholder="${f.placeholder}" oninput="onField('${p.id}','${f.key}',this.value)">${fieldValues[p.id][f.key]||''}</textarea>`
+          : `<input type="text" placeholder="${f.placeholder}" value="${fieldValues[p.id][f.key]||''}" oninput="onField('${p.id}','${f.key}',this.value)">`
+        }
+      </div>`;
+    });
+
+    card.innerHTML = `
+      <div class="card-header">
+        <div class="card-icon">${p.icon}</div>
+        <div class="card-meta">
+          <div class="card-num">프롬프트 ${p.num}</div>
+          <div class="card-title">${p.title}</div>
+          <div class="card-desc">${p.desc}</div>
+        </div>
+      </div>
+      <div class="card-body">
+        ${fieldsHTML}
+        <div class="prompt-preview" id="preview-${p.id}">${renderPreview(p)}</div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="sendToAI('${p.id}')">
+            ⚡ AI 응답 받기
+          </button>
+          <button class="btn btn-copy" onclick="copyPrompt('${p.id}')">
+            📋 프롬프트 복사
+          </button>
+        </div>
+        <div class="response-area" id="resp-${p.id}">
+          <div class="response-label">Claude 응답</div>
+          <div class="response-content" id="resp-content-${p.id}">
+            <button class="copy-resp-btn" onclick="copyResponse('${p.id}')">복사</button>
+            <span id="resp-text-${p.id}"></span>
+          </div>
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+// ─── FIELD UPDATE ────────────────────────────────────────────────────────────
+function onField(promptId, key, value) {
+  if (!fieldValues[promptId]) fieldValues[promptId] = {};
+  fieldValues[promptId][key] = value;
+  const p = PROMPTS.find(x => x.id === promptId);
+  document.getElementById('preview-' + promptId).innerHTML = renderPreview(p);
+}
+
+function renderPreview(p) {
+  let text = p.template(fieldValues[p.id] || {});
+  // highlight unfilled slots [...]
+  text = text.replace(/\[([^\]]+)\]/g, (m, inner) => {
+    const isEmpty = !inner || inner === p.fields.find(f=>f.key)?.[0]?.placeholder;
+    return `<span class="slot">[${inner}]</span>`;
+  });
+  return text;
+}
+
+// ─── COPY PROMPT ─────────────────────────────────────────────────────────────
+function copyPrompt(promptId) {
+  const p = PROMPTS.find(x => x.id === promptId);
+  const text = p.template(fieldValues[promptId] || {});
+  navigator.clipboard.writeText(text).then(() => showToast('프롬프트 복사됨!'));
+}
+function copyResponse(promptId) {
+  const text = document.getElementById('resp-text-' + promptId).textContent;
+  navigator.clipboard.writeText(text).then(() => showToast('응답 복사됨!'));
+}
+
+// ─── SEND TO AI ──────────────────────────────────────────────────────────────
+async function sendToAI(promptId) {
+  if (!apiKey) {
+    setApiStatus('⚠️ 먼저 API 키를 저장해주세요', 'err');
+    document.getElementById('apiKeyInput').focus();
+    return;
+  }
+  const p = PROMPTS.find(x => x.id === promptId);
+  const prompt = p.template(fieldValues[promptId] || {});
+
+  const respArea    = document.getElementById('resp-' + promptId);
+  const respContent = document.getElementById('resp-content-' + promptId);
+  const respText    = document.getElementById('resp-text-' + promptId);
+
+  respArea.classList.add('visible');
+  respContent.classList.add('loading');
+  respText.innerHTML = '<span class="thinking-dots">Claude가 생각 중</span>';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-calls': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-7',
+        max_tokens: 1024,
+        system: 'You are an ADHD executive function coach. Respond in Korean. Be concrete, specific, and action-oriented. Use bullet points and numbered lists where helpful. Keep responses focused and practical.',
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || '응답 없음';
+    respContent.classList.remove('loading');
+    respText.textContent = reply;
+    responses[promptId] = reply;
+  } catch (e) {
+    respContent.classList.remove('loading');
+    respContent.style.borderColor = 'var(--danger)';
+    respText.textContent = '⚠️ 오류: ' + e.message;
+    setTimeout(() => { respContent.style.borderColor = ''; }, 3000);
+  }
+}
+
+// ─── TOAST ───────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+</script>
+</body>
+</html>
