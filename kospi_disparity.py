@@ -43,10 +43,8 @@ def setup_korean_font() -> FontProperties:
 
 
 def load_local(csv_path: Path) -> pd.DataFrame:
-    """yfinance 멀티헤더 포맷 CSV를 읽어 Date 인덱스와 Close 컬럼을 반환한다."""
-    # 1행: Price,Close,High,...  2행: Ticker,^KS11,...  3행: Date,,,...
-    df = pd.read_csv(csv_path, skiprows=3, header=None)
-    df.columns = ["Date", "Close", "High", "Low", "Open", "Volume"]
+    """`Date,Close` 포맷 CSV를 읽어 Date 인덱스와 Close 컬럼을 반환한다."""
+    df = pd.read_csv(csv_path)
     df["Date"] = pd.to_datetime(df["Date"])
     df = df.sort_values("Date").set_index("Date")
     return df[["Close"]].astype(float)
