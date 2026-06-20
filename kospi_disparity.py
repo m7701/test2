@@ -28,23 +28,45 @@ import pandas as pd
 # ----------------------------------------------------------------------------
 # 1) 데이터 로딩 (여러 소스 폴백)
 # ----------------------------------------------------------------------------
-def load_kospi(start, end):
-    """KOSPI 종가 시계열(Series, index=날짜)을 반환. 실패 시 예외."""
+def load_kospi(start, end, source="auto"):
+    """KOSPI 종가 시계열(Series, index=날짜)을 반환. 실패 시 예외.
+
+    source: auto(krx->fdr->yahoo) | krx | fdr | yahoo
+    """
     errors = []
 
-    # (1) FinanceDataReader — 국내에서 가장 안정적
-    try:
-        import FinanceDataReader as fdr
-        df = fdr.DataReader("KS11", start, end)  # KS11 = KOSPI 종합지수
-        if df is not None and len(df) > 0:
-            s = df["Close"].dropna()
-            s.name = "KOSPI"
-            print(f"[데이터] FinanceDataReader 사용, {len(s)}일 ({s.index[0].date()} ~ {s.index[-1].date()})")
-            return s
-    except Exception as e:  # noqa: BLE001
-        errors.append(f"FinanceDataReader: {e}")
+    # (1) pykrx — 한국거래소(KRX) 공식 지수 데이터에 가장 직접적
+    if source in ("auto", "krx"):
+        try:
+            from pykrx import stock
+            s_str = pd.Timestamp(start).strftime("%Y%m%d")
+            e_str = pd.Timestamp(end).strftime("%Y%m%d")
+            df = stock.get_index_ohlcv(s_str, e_str, "1001")  # 1001 = KOSPI 종합지수
+            if df is not None and len(df) > 0:
+                s = df["종가"].dropna()
+                s.name = "KOSPI"
+                print(f"[데이터] pykrx(KRX 한국거래소) 사용, {len(s)}일 "
+                      f"({s.index[0].date()} ~ {s.index[-1].date()})")
+                return s
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"pykrx(KRX): {e}")
 
-    # (2) yfinance
+    # (2) FinanceDataReader — KRX/네이버 기반, 국내에서 안정적
+    if source in ("auto", "fdr"):
+        try:
+            import FinanceDataReader as fdr
+            df = fdr.DataReader("KS11", start, end)  # KS11 = KOSPI 종합지수
+            if df is not None and len(df) > 0:
+                s = df["Close"].dropna()
+                s.name = "KOSPI"
+                print(f"[데이터] FinanceDataReader 사용, {len(s)}일 ({s.index[0].date()} ~ {s.index[-1].date()})")
+                return s
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"FinanceDataReader: {e}")
+
+    # (3) yfinance (^KS11) — 해외 폴백
+    if source not in ("auto", "yahoo"):
+        raise RuntimeError("데이터 로딩 실패:\n" + "\n".join(f"  - {x}" for x in errors))
     try:
         import yfinance as yf
         df = yf.download("^KS11", start=start, end=end, progress=False, auto_adjust=True)
@@ -59,22 +81,8 @@ def load_kospi(start, end):
     except Exception as e:  # noqa: BLE001
         errors.append(f"yfinance: {e}")
 
-    # (3) pykrx
-    try:
-        from pykrx import stock
-        s_str = pd.Timestamp(start).strftime("%Y%m%d")
-        e_str = pd.Timestamp(end).strftime("%Y%m%d")
-        df = stock.get_index_ohlcv(s_str, e_str, "1001")  # 1001 = KOSPI
-        if df is not None and len(df) > 0:
-            s = df["종가"].dropna()
-            s.name = "KOSPI"
-            print(f"[데이터] pykrx 사용, {len(s)}일 ({s.index[0].date()} ~ {s.index[-1].date()})")
-            return s
-    except Exception as e:  # noqa: BLE001
-        errors.append(f"pykrx: {e}")
-
     raise RuntimeError(
-        "KOSPI 데이터를 가져오지 못했습니다. 인터넷(금융 사이트) 접근이 필요합니다.\n"
+        "KOSPI 데이터를 가져오지 못했습니다. 인터넷(KRX/네이버/야후) 접근이 필요합니다.\n"
         + "\n".join(f"  - {x}" for x in errors)
     )
 
@@ -221,6 +229,8 @@ def main():
     ap.add_argument("--end", type=str, default=None)
     ap.add_argument("--drop", type=float, default=4.0, help="단기하락 기준 낙폭%% (기본 4%%)")
     ap.add_argument("--out", type=str, default="kospi_disparity.png")
+    ap.add_argument("--source", choices=["auto", "krx", "fdr", "yahoo"], default="auto",
+                    help="데이터 소스 (auto=KRX→FDR→Yahoo, krx=한국거래소 직접)")
     ap.add_argument("--demo", action="store_true", help="가짜 데이터로 차트 형식만 미리보기")
     args = ap.parse_args()
 
@@ -233,7 +243,7 @@ def main():
         print("[주의] --demo 모드: 아래 결과는 '가짜 데이터'이며 실제 KOSPI가 아닙니다.")
         close_full = demo_series(fetch_start, end)
     else:
-        close_full = load_kospi(fetch_start, end)
+        close_full = load_kospi(fetch_start, end, source=args.source)
 
     ma_full, disp_full = disparity(close_full, args.ma)
 
