@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>KOSPI 이동평균 · 이격도</title>
+<script src="vendor/chart.umd.min.js"></script>
+<script src="data.js"></script>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#fff; --line:#e6e8eb; --ink:#1f2937; --muted:#9aa0a6;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Roboto,sans-serif;
+    padding:18px;
+  }
+  .wrap{max-width:1180px; margin:0 auto}
+  .controls,.card{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    box-shadow:0 1px 3px rgba(0,0,0,.04);
+  }
+  .controls{padding:14px 18px; margin-bottom:16px; display:flex; align-items:center; gap:18px; flex-wrap:wrap}
+  .controls .label{font-weight:700; color:#374151}
+  .opts{display:flex; gap:10px; flex-wrap:wrap}
+  .opt{
+    display:inline-flex; align-items:center; gap:7px; padding:7px 12px;
+    border:1px solid var(--line); border-radius:8px; cursor:pointer; user-select:none;
+    font-size:14px; color:#374151; transition:.15s;
+  }
+  .opt:hover{border-color:#cfd3d8}
+  .opt input{accent-color:#b8860b; width:15px; height:15px; cursor:pointer}
+  .opt .sw{width:11px; height:11px; border-radius:3px; display:inline-block}
+  .card{padding:16px 18px; margin-bottom:16px}
+  .card h2{margin:0 0 10px; font-size:16px; font-weight:700}
+  .chartbox{position:relative; height:360px}
+  .chartbox.small{height:300px}
+  .foot{color:var(--muted); font-size:12px; margin-top:6px}
+  a{color:#b8860b}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="controls">
+    <span class="label">이평선</span>
+    <div class="opts" id="opts"></div>
+  </div>
+
+  <div class="card">
+    <h2>KOSPI 가격 및 이동평균</h2>
+    <div class="chartbox"><canvas id="priceChart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <h2>KOSPI 이격도</h2>
+    <div class="chartbox small"><canvas id="dispChart"></canvas></div>
+    <div class="foot" id="foot"></div>
+  </div>
+</div>
+
+<script>
+// ---- 이평선 정의 ----
+const PERIODS = [5,10,20,50,120,200];
+const DEFAULT_ON = new Set([50]);
+const COLORS = {5:"#16a34a",10:"#0ea5e9",20:"#7c3aed",50:"#b8860b",120:"#dc2626",200:"#475569"};
+
+const raw = window.KOSPI_DATA;               // [{d:'YYYY-MM-DD', c:close}, ...]
+const labels = raw.map(p => p.d);
+const close = raw.map(p => p.c);
+
+// 단순이동평균 (앞쪽은 null)
+function sma(arr, n){
+  const out = new Array(arr.length).fill(null);
+  let sum = 0;
+  for(let i=0;i<arr.length;i++){
+    sum += arr[i];
+    if(i>=n) sum -= arr[i-n];
+    if(i>=n-1) out[i] = sum/n;
+  }
+  return out;
+}
+// 이격도 = 종가 / 이동평균 * 100
+function disparity(maArr){
+  return maArr.map((m,i)=> m==null ? null : close[i]/m*100);
+}
+
+const MA = {}, DISP = {};
+PERIODS.forEach(n => { MA[n] = sma(close, n); DISP[n] = disparity(MA[n]); });
+
+// x축: 월 단위 간격으로만 라벨 표시 (MM-DD)
+const tickCb = (val) => {
+  const d = labels[val];
+  if(!d) return '';
+  const idx = val;
+  const prev = labels[idx-1];
+  // 월이 바뀌는 지점 + 첫/마지막
+  if(idx===0 || idx===labels.length-1) return d.slice(5);
+  if(prev && prev.slice(0,7)!==d.slice(0,7) && d.slice(8)<="07") return d.slice(5);
+  return '';
+};
+
+const baseOpts = (yRight=true) => ({
+  responsive:true, maintainAspectRatio:false,
+  interaction:{mode:'index', intersect:false},
+  elements:{point:{radius:0, hoverRadius:3}, line:{borderWidth:1.6, tension:0}},
+  plugins:{
+    legend:{display:true, position:'top', align:'start',
+            labels:{boxWidth:18, boxHeight:2, font:{size:12}, usePointStyle:false}},
+    tooltip:{callbacks:{title:(it)=>labels[it[0].dataIndex]}}
+  },
+  scales:{
+    x:{grid:{color:'#eef0f2'}, ticks:{maxRotation:0, autoSkip:false, callback:tickCb,
+       color:'#9aa0a6', font:{size:11}}},
+    y:{position: yRight?'right':'left', grid:{color:'#eef0f2'},
+       ticks:{color:'#9aa0a6', font:{size:11},
+              callback:v=>v.toLocaleString(undefined,{maximumFractionDigits:2})}}
+  }
+});
+
+// ---- 가격 차트 ----
+const priceChart = new Chart(document.getElementById('priceChart'), {
+  type:'line',
+  data:{ labels, datasets:[] },
+  options: baseOpts(true)
+});
+// ---- 이격도 차트 ----
+const baseline100 = {
+  id:'baseline100',
+  afterDraw(chart){
+    const {ctx, chartArea:{left,right}, scales:{y}} = chart;
+    if(!y) return;
+    const yy = y.getPixelForValue(100);
+    ctx.save(); ctx.strokeStyle='#b0b4ba'; ctx.setLineDash([5,4]); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(left,yy); ctx.lineTo(right,yy); ctx.stroke(); ctx.restore();
+  }
+};
+const dispChart = new Chart(document.getElementById('dispChart'), {
+  type:'line',
+  data:{ labels, datasets:[] },
+  options: baseOpts(true),
+  plugins:[baseline100]
+});
+
+function selected(){
+  return PERIODS.filter(n => document.getElementById('cb'+n).checked);
+}
+
+function render(){
+  const on = selected();
+
+  // 가격: 종가 + 선택 이평선
+  priceChart.data.datasets = [
+    {label:'종가', data:close, borderColor:'#1a1a2e', borderWidth:1.4}
+  ].concat(on.map(n => ({label:n+'일', data:MA[n], borderColor:COLORS[n], borderWidth:1.6})));
+  priceChart.update();
+
+  // 이격도: 선택 이평선
+  dispChart.data.datasets = on.map(n => ({
+    label:n+'일 이격도', data:DISP[n], borderColor:COLORS[n], borderWidth:1.6
+  }));
+  dispChart.update();
+
+  // 푸터: 최신값 요약
+  const last = raw.length-1;
+  const parts = on.map(n=>{
+    const dv = DISP[n][last];
+    return dv==null ? `${n}일: 데이터부족` : `${n}일 이격도 ${dv.toFixed(1)}`;
+  });
+  document.getElementById('foot').textContent =
+    `최근 ${labels[last]} 종가 ${close[last].toLocaleString()}  |  ` +
+    (parts.join('   ·   ') || '이평선을 선택하세요') +
+    `   |  이격도 = 종가 ÷ N일 이동평균 × 100`;
+}
+
+// 체크박스 생성
+const optsEl = document.getElementById('opts');
+PERIODS.forEach(n=>{
+  const lab = document.createElement('label'); lab.className='opt';
+  lab.innerHTML =
+    `<input type="checkbox" id="cb${n}" ${DEFAULT_ON.has(n)?'checked':''}>` +
+    `<span class="sw" style="background:${COLORS[n]}"></span>${n}일`;
+  lab.querySelector('input').addEventListener('change', render);
+  optsEl.appendChild(lab);
+});
+
+render();
+</script>
+</body>
+</html>
